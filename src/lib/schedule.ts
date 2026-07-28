@@ -89,6 +89,18 @@ export const getSuspensionReason = (
 export const isServiceDay = (timetable: Timetable, date: Date) =>
   getSuspensionReason(timetable, date) === null;
 
+export const isSelectableDepartureToday = (
+  timetable: Timetable,
+  time: string,
+  now: Date,
+) => {
+  const today = startOfDay(now);
+  return (
+    isServiceDay(timetable, today) &&
+    departureDate(today, time).getTime() >= now.getTime()
+  );
+};
+
 export const getNextServiceDate = (timetable: Timetable, from: Date) => {
   for (let offset = 0; offset < 370; offset += 1) {
     const candidate = startOfDay(addDays(from, offset));
@@ -109,7 +121,7 @@ export const getNextDeparture = (
 
   if (isServiceDay(timetable, today)) {
     const upcomingTime = route.departures.find(
-      (time) => differenceInMinutes(departureDate(today, time), now) >= 0,
+      (time) => departureDate(today, time).getTime() >= now.getTime(),
     );
 
     if (upcomingTime) {
@@ -148,7 +160,7 @@ export const getDepartureOccurrence = (
   const today = startOfDay(now);
   const todayDeparture = departureDate(today, time);
   const canUseToday =
-    isServiceDay(timetable, today) && differenceInMinutes(todayDeparture, now) >= 0;
+    isServiceDay(timetable, today) && todayDeparture.getTime() >= now.getTime();
   const serviceDate = canUseToday
     ? today
     : getNextServiceDate(timetable, addDays(today, 1));
