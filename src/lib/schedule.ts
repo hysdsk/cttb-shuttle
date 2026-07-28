@@ -1,6 +1,6 @@
 import {
   addDays,
-  differenceInMinutes,
+  differenceInSeconds,
   format,
   isWithinInterval,
   parseISO,
@@ -48,7 +48,7 @@ export type DepartureOccurrence = {
   route: ShuttleRoute;
   time: string;
   date: Date;
-  minutesUntil: number;
+  secondsUntil: number;
 };
 
 const dateKey = (date: Date) => format(date, "yyyy-MM-dd");
@@ -89,6 +89,18 @@ export const getSuspensionReason = (
 export const isServiceDay = (timetable: Timetable, date: Date) =>
   getSuspensionReason(timetable, date) === null;
 
+export const isSelectableDepartureToday = (
+  timetable: Timetable,
+  time: string,
+  now: Date,
+) => {
+  const today = startOfDay(now);
+  return (
+    isServiceDay(timetable, today) &&
+    departureDate(today, time).getTime() >= now.getTime()
+  );
+};
+
 export const getNextServiceDate = (timetable: Timetable, from: Date) => {
   for (let offset = 0; offset < 370; offset += 1) {
     const candidate = startOfDay(addDays(from, offset));
@@ -109,7 +121,7 @@ export const getNextDeparture = (
 
   if (isServiceDay(timetable, today)) {
     const upcomingTime = route.departures.find(
-      (time) => differenceInMinutes(departureDate(today, time), now) >= 0,
+      (time) => departureDate(today, time).getTime() >= now.getTime(),
     );
 
     if (upcomingTime) {
@@ -118,7 +130,7 @@ export const getNextDeparture = (
         route,
         time: upcomingTime,
         date,
-        minutesUntil: differenceInMinutes(date, now),
+        secondsUntil: differenceInSeconds(date, now),
       };
     }
   }
@@ -135,7 +147,7 @@ export const getNextDeparture = (
     route,
     time,
     date,
-    minutesUntil: differenceInMinutes(date, now),
+    secondsUntil: differenceInSeconds(date, now),
   };
 };
 
@@ -148,7 +160,7 @@ export const getDepartureOccurrence = (
   const today = startOfDay(now);
   const todayDeparture = departureDate(today, time);
   const canUseToday =
-    isServiceDay(timetable, today) && differenceInMinutes(todayDeparture, now) >= 0;
+    isServiceDay(timetable, today) && todayDeparture.getTime() >= now.getTime();
   const serviceDate = canUseToday
     ? today
     : getNextServiceDate(timetable, addDays(today, 1));
@@ -162,22 +174,24 @@ export const getDepartureOccurrence = (
     route,
     time,
     date,
-    minutesUntil: differenceInMinutes(date, now),
+    secondsUntil: differenceInSeconds(date, now),
   };
 };
 
-export const formatRemaining = (minutes: number) => {
-  if (minutes <= 0) {
+export const formatRemaining = (seconds: number) => {
+  if (seconds <= 0) {
     return "まもなく出発";
   }
 
-  const days = Math.floor(minutes / (60 * 24));
-  const hours = Math.floor((minutes % (60 * 24)) / 60);
-  const restMinutes = minutes % 60;
+  const days = Math.floor(seconds / (60 * 60 * 24));
+  const hours = Math.floor((seconds % (60 * 60 * 24)) / (60 * 60));
+  const minutes = Math.floor((seconds % (60 * 60)) / 60);
+  const restSeconds = seconds % 60;
   const parts = [
     days > 0 ? `${days}日` : null,
     hours > 0 ? `${hours}時間` : null,
-    `${restMinutes}分`,
+    minutes > 0 ? `${minutes}分` : null,
+    `${restSeconds}秒`,
   ].filter(Boolean);
 
   return `あと${parts.join("")}`;

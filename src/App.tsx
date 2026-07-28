@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRightLeft, CalendarX, Clock, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { differenceInSeconds, format } from "date-fns";
 import timetableJson from "@/data/timetable.json";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
   getDepartureOccurrence,
   getNextDeparture,
   getSuspensionReason,
+  isSelectableDepartureToday,
   type DepartureOccurrence,
   type RouteId,
   type Timetable,
@@ -24,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const timetable = timetableJson as Timetable;
+const ACTIVE_ROUTE_STORAGE_KEY = "cttb-shuttle-active-route";
 
 const groupDeparturesByHour = (departures: string[]) =>
   departures.reduce<Array<{ hour: string; times: string[] }>>((groups, time) => {
@@ -39,11 +41,32 @@ const groupDeparturesByHour = (departures: string[]) =>
     return groups;
   }, []);
 
+const isRouteId = (value: string | null): value is RouteId =>
+  timetable.routes.some((route) => route.id === value);
+
+const getInitialRouteId = (): RouteId => {
+  const fallbackRouteId = timetable.routes[0].id;
+
+  try {
+    const storedRouteId = window.localStorage.getItem(ACTIVE_ROUTE_STORAGE_KEY);
+    return isRouteId(storedRouteId) ? storedRouteId : fallbackRouteId;
+  } catch {
+    return fallbackRouteId;
+  }
+};
+
+const saveActiveRouteId = (routeId: RouteId) => {
+  try {
+    window.localStorage.setItem(ACTIVE_ROUTE_STORAGE_KEY, routeId);
+  } catch {
+    // localStorage may be unavailable in private or restricted browser modes.
+  }
+};
+
 function App() {
   const [now, setNow] = useState(() => new Date());
-  const [activeRouteId, setActiveRouteId] = useState<RouteId>(
-    timetable.routes[0].id,
-  );
+  const [activeRouteId, setActiveRouteId] =
+    useState<RouteId>(getInitialRouteId);
   const [selectedDeparture, setSelectedDeparture] =
     useState<DepartureOccurrence | null>(null);
 
@@ -61,11 +84,25 @@ function App() {
     () => getNextDeparture(timetable, activeRoute, now),
     [activeRoute, now],
   );
+  const currentSelectedDeparture = useMemo(
+    () =>
+      selectedDeparture
+        ? {
+            ...selectedDeparture,
+            secondsUntil: differenceInSeconds(selectedDeparture.date, now),
+          }
+        : null,
+    [now, selectedDeparture],
+  );
 
   const suspensionReason = getSuspensionReason(timetable, now);
   const isSuspended = suspensionReason !== null;
 
   const handleSelectTime = (time: string) => {
+    if (!isSelectableDepartureToday(timetable, time, now)) {
+      return;
+    }
+
     setSelectedDeparture(getDepartureOccurrence(timetable, activeRoute, time, now));
   };
 
@@ -131,7 +168,7 @@ function App() {
                     <p className="text-right text-sm font-medium">
                       {formatServiceDate(nextDeparture.date)}
                       <br />
-                      {formatRemaining(nextDeparture.minutesUntil)}
+                      {formatRemaining(nextDeparture.secondsUntil)}
                     </p>
                   </div>
                 </div>
@@ -164,21 +201,22 @@ function App() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedDeparture ? (
+              {currentSelectedDeparture ? (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    {selectedDeparture.route.from} から {selectedDeparture.route.to}
+                    {currentSelectedDeparture.route.from} から{" "}
+                    {currentSelectedDeparture.route.to}
                   </p>
                   <div className="flex items-end justify-between gap-3">
                     <p className="text-3xl font-bold tabular-nums">
-                      {selectedDeparture.time}
+                      {currentSelectedDeparture.time}
                     </p>
                     <p className="text-right font-semibold text-accent">
-                      {formatRemaining(selectedDeparture.minutesUntil)}
+                      {formatRemaining(currentSelectedDeparture.secondsUntil)}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {formatServiceDate(selectedDeparture.date)} の便
+                    {formatServiceDate(currentSelectedDeparture.date)} の便
                   </p>
                 </div>
               ) : (
@@ -194,7 +232,9 @@ function App() {
           <Tabs
             value={activeRouteId}
             onValueChange={(value) => {
-              setActiveRouteId(value as RouteId);
+              const routeId = value as RouteId;
+              setActiveRouteId(routeId);
+              saveActiveRouteId(routeId);
               setSelectedDeparture(null);
             }}
           >
@@ -239,10 +279,17 @@ function App() {
                             <div className="flex flex-wrap gap-2 px-3 py-3">
                               {group.times.map((time) => {
                                 const minute = time.split(":")[1];
+                                const isDisabled = !isSelectableDepartureToday(
+                                  timetable,
+                                  time,
+                                  now,
+                                );
                                 const isNext =
+                                  !isDisabled &&
                                   nextDeparture?.route.id === route.id &&
                                   nextDeparture.time === time;
                                 const isSelected =
+                                  !isDisabled &&
                                   selectedDeparture?.route.id === route.id &&
                                   selectedDeparture.time === time;
 
@@ -256,7 +303,10 @@ function App() {
                                       isNext &&
                                         "border-secondary shadow-[0_0_0_2px_hsl(var(--secondary)/0.35)]",
                                       isSelected && "ring-2 ring-accent",
+                                      isDisabled &&
+                                        "border-muted bg-muted text-muted-foreground opacity-50",
                                     )}
+                                    disabled={isDisabled}
                                     onClick={() => handleSelectTime(time)}
                                     aria-label={`${route.label} ${time} 発`}
                                   >
