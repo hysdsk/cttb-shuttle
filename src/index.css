@@ -4,21 +4,21 @@
 
 @layer base {
   :root {
-    --background: 42 32% 97%;
-    --foreground: 216 27% 15%;
+    --background: 40 10% 96%;
+    --foreground: 32 8% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 216 27% 15%;
-    --primary: 188 77% 28%;
+    --card-foreground: 32 8% 13%;
+    --primary: 32 8% 13%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 35 84% 57%;
-    --secondary-foreground: 216 27% 15%;
-    --muted: 42 20% 92%;
-    --muted-foreground: 216 13% 42%;
-    --accent: 157 44% 40%;
+    --secondary: 39 42% 48%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 42 12% 91%;
+    --muted-foreground: 36 6% 40%;
+    --accent: 195 38% 30%;
     --accent-foreground: 0 0% 100%;
-    --border: 42 18% 84%;
-    --input: 42 18% 84%;
-    --ring: 188 77% 28%;
+    --border: 40 12% 81%;
+    --input: 40 12% 81%;
+    --ring: 39 42% 48%;
   }
 
   * {
@@ -27,5 +27,8 @@
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
+    background-image:
+      linear-gradient(180deg, hsl(0 0% 100% / 0.78), hsl(var(--background)) 18rem),
+      linear-gradient(90deg, hsl(39 42% 48% / 0.08), transparent 34rem);
   }
 }

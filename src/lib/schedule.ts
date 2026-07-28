@@ -101,6 +101,15 @@ export const isSelectableDepartureToday = (
   );
 };
 
+export const hasRemainingDeparturesToday = (
+  timetable: Timetable,
+  route: ShuttleRoute,
+  now: Date,
+) =>
+  route.departures.some((time) =>
+    isSelectableDepartureToday(timetable, time, now),
+  );
+
 export const getNextServiceDate = (timetable: Timetable, from: Date) => {
   for (let offset = 0; offset < 370; offset += 1) {
     const candidate = startOfDay(addDays(from, offset));
