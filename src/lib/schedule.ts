@@ -1,6 +1,6 @@
 import {
   addDays,
-  differenceInMinutes,
+  differenceInSeconds,
   format,
   isWithinInterval,
   parseISO,
@@ -48,7 +48,7 @@ export type DepartureOccurrence = {
   route: ShuttleRoute;
   time: string;
   date: Date;
-  minutesUntil: number;
+  secondsUntil: number;
 };
 
 const dateKey = (date: Date) => format(date, "yyyy-MM-dd");
@@ -130,7 +130,7 @@ export const getNextDeparture = (
         route,
         time: upcomingTime,
         date,
-        minutesUntil: differenceInMinutes(date, now),
+        secondsUntil: differenceInSeconds(date, now),
       };
     }
   }
@@ -147,7 +147,7 @@ export const getNextDeparture = (
     route,
     time,
     date,
-    minutesUntil: differenceInMinutes(date, now),
+    secondsUntil: differenceInSeconds(date, now),
   };
 };
 
@@ -174,22 +174,24 @@ export const getDepartureOccurrence = (
     route,
     time,
     date,
-    minutesUntil: differenceInMinutes(date, now),
+    secondsUntil: differenceInSeconds(date, now),
   };
 };
 
-export const formatRemaining = (minutes: number) => {
-  if (minutes <= 0) {
+export const formatRemaining = (seconds: number) => {
+  if (seconds <= 0) {
     return "まもなく出発";
   }
 
-  const days = Math.floor(minutes / (60 * 24));
-  const hours = Math.floor((minutes % (60 * 24)) / 60);
-  const restMinutes = minutes % 60;
+  const days = Math.floor(seconds / (60 * 60 * 24));
+  const hours = Math.floor((seconds % (60 * 60 * 24)) / (60 * 60));
+  const minutes = Math.floor((seconds % (60 * 60)) / 60);
+  const restSeconds = seconds % 60;
   const parts = [
     days > 0 ? `${days}日` : null,
     hours > 0 ? `${hours}時間` : null,
-    `${restMinutes}分`,
+    minutes > 0 ? `${minutes}分` : null,
+    `${restSeconds}秒`,
   ].filter(Boolean);
 
   return `あと${parts.join("")}`;

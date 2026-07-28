@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRightLeft, CalendarX, Clock, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { differenceInSeconds, format } from "date-fns";
 import timetableJson from "@/data/timetable.json";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +84,16 @@ function App() {
     () => getNextDeparture(timetable, activeRoute, now),
     [activeRoute, now],
   );
+  const currentSelectedDeparture = useMemo(
+    () =>
+      selectedDeparture
+        ? {
+            ...selectedDeparture,
+            secondsUntil: differenceInSeconds(selectedDeparture.date, now),
+          }
+        : null,
+    [now, selectedDeparture],
+  );
 
   const suspensionReason = getSuspensionReason(timetable, now);
   const isSuspended = suspensionReason !== null;
@@ -158,7 +168,7 @@ function App() {
                     <p className="text-right text-sm font-medium">
                       {formatServiceDate(nextDeparture.date)}
                       <br />
-                      {formatRemaining(nextDeparture.minutesUntil)}
+                      {formatRemaining(nextDeparture.secondsUntil)}
                     </p>
                   </div>
                 </div>
@@ -191,21 +201,22 @@ function App() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {selectedDeparture ? (
+              {currentSelectedDeparture ? (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    {selectedDeparture.route.from} から {selectedDeparture.route.to}
+                    {currentSelectedDeparture.route.from} から{" "}
+                    {currentSelectedDeparture.route.to}
                   </p>
                   <div className="flex items-end justify-between gap-3">
                     <p className="text-3xl font-bold tabular-nums">
-                      {selectedDeparture.time}
+                      {currentSelectedDeparture.time}
                     </p>
                     <p className="text-right font-semibold text-accent">
-                      {formatRemaining(selectedDeparture.minutesUntil)}
+                      {formatRemaining(currentSelectedDeparture.secondsUntil)}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {formatServiceDate(selectedDeparture.date)} の便
+                    {formatServiceDate(currentSelectedDeparture.date)} の便
                   </p>
                 </div>
               ) : (
