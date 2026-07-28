@@ -56,7 +56,7 @@ const config = {
         ],
       },
       boxShadow: {
-        panel: "0 18px 60px rgb(15 23 42 / 0.08)",
+        panel: "0 18px 48px rgb(28 25 22 / 0.07)",
       },
     },
   },

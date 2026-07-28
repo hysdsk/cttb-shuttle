@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, CalendarX, Clock, MapPin } from "lucide-react";
+import { CalendarX, Clock, MapPin } from "lucide-react";
 import { differenceInSeconds, format } from "date-fns";
 import timetableJson from "@/data/timetable.json";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import {
   getDepartureOccurrence,
   getNextDeparture,
   getSuspensionReason,
+  hasRemainingDeparturesToday,
+  isServiceDay,
   isSelectableDepartureToday,
   type DepartureOccurrence,
   type RouteId,
@@ -97,6 +99,9 @@ function App() {
 
   const suspensionReason = getSuspensionReason(timetable, now);
   const isSuspended = suspensionReason !== null;
+  const hasEndedToday =
+    isServiceDay(timetable, now) &&
+    !hasRemainingDeparturesToday(timetable, activeRoute, now);
 
   const handleSelectTime = (time: string) => {
     if (!isSelectableDepartureToday(timetable, time, now)) {
@@ -108,10 +113,10 @@ function App() {
 
   return (
     <main className="min-h-screen">
-      <section className="border-b bg-card">
+      <section className="border-b border-primary/70 bg-primary text-primary-foreground">
         <div className="container flex flex-col gap-5 py-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+            <div className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1 text-sm font-medium text-white/80">
               <MapPin className="h-4 w-4" aria-hidden="true" />
               {timetable.stops.apartment}
             </div>
@@ -119,15 +124,15 @@ function App() {
               <h1 className="text-3xl font-bold leading-tight md:text-4xl">
                 シャトルバス時刻表
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground md:text-base">
-                {timetable.stops.apartment} と {timetable.stops.station} を結ぶ便
+              <p className="mt-2 text-sm text-white/70 md:text-base">
+                シティタワーズ東京ベイ の 住民専用 シャトルバス便
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-lg border bg-background px-4 py-3">
-            <Clock className="h-5 w-5 text-primary" aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white">
+            <Clock className="h-5 w-5 text-secondary" aria-hidden="true" />
             <div>
-              <p className="text-xs text-muted-foreground">現在時刻</p>
+              <p className="text-xs text-white/65">現在時刻</p>
               <p className="text-xl font-semibold tabular-nums">
                 {format(now, "HH:mm:ss")}
               </p>
@@ -141,9 +146,6 @@ function App() {
           <Card>
             <CardHeader>
               <CardTitle>次の便</CardTitle>
-              <CardDescription>
-                終バス後や運休日は次の運行日の始発を表示します
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isSuspended ? (
@@ -158,8 +160,18 @@ function App() {
                 </div>
               ) : null}
 
-              {nextDeparture ? (
-                <div className="rounded-lg bg-primary p-4 text-primary-foreground">
+              {hasEndedToday ? (
+                <div className="rounded-lg border bg-muted p-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {activeRoute.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold">本日の便は終了しました</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    日付が変わると、次の便までの時間を表示します。
+                  </p>
+                </div>
+              ) : nextDeparture ? (
+                <div className="rounded-lg border border-secondary/45 bg-primary p-4 text-primary-foreground">
                   <p className="text-sm opacity-90">{nextDeparture.route.label}</p>
                   <div className="mt-2 flex items-end justify-between gap-3">
                     <p className="text-4xl font-bold tabular-nums">
@@ -246,10 +258,6 @@ function App() {
                   </TabsTrigger>
                 ))}
               </TabsList>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
-                方向を切り替え
-              </div>
             </div>
 
             {timetable.routes.map((route) => (
@@ -264,7 +272,9 @@ function App() {
                   <CardContent>
                     <div className="overflow-hidden rounded-lg border">
                       <div className="grid grid-cols-[4rem_1fr] border-b bg-muted text-sm font-semibold text-muted-foreground">
-                        <div className="border-r px-4 py-3 text-center">時</div>
+                        <div className="border-r border-secondary/30 bg-primary px-4 py-3 text-center text-primary-foreground">
+                          時
+                        </div>
                         <div className="px-4 py-3">分</div>
                       </div>
                       <div className="divide-y">
@@ -273,7 +283,7 @@ function App() {
                             key={group.hour}
                             className="grid grid-cols-[4rem_1fr] bg-card"
                           >
-                            <div className="flex items-center justify-center border-r bg-muted/45 px-3 py-3 text-xl font-semibold tabular-nums">
+                            <div className="flex items-center justify-center border-r bg-muted/65 px-3 py-3 text-xl font-semibold tabular-nums">
                               {Number(group.hour)}
                             </div>
                             <div className="flex flex-wrap gap-2 px-3 py-3">
